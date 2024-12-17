@@ -1,0 +1,24 @@
+without augmentation - without freezing params in training
+
+resnet50 , 87.85
+resnet101 , 66.84 -> vanishing gradient 
+resnet101 , 64.89 -> vanishing gradient
+
+
+freezing params in training inorder to prevent vanishing gradient, adding data augmentation, 
+resnet101 , 87.83
+
+
+16/12/2024
+resnet50 , 78.91 , 2297.734112739563
+
+
+final experiment (use test transform for validation dataset)
+model_baseline, accuracy , training time
+resnet50 , 82.13 , 2162.2419283390045
+resnet101 , 74.54 , 3351.655822277069
+
+
+use only 25000 pictures for training dataset
+
+

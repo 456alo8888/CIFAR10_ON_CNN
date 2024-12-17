@@ -1,0 +1,117 @@
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torchvision/models/_utils.py", line 142, in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torchvision/models/_utils.py", line 228, in inner_wrapper
+    return builder(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torchvision/models/efficientnet.py", line 767, in efficientnet_b0
+    weights = EfficientNet_B0_Weights.verify(weights)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torchvision/models/_api.py", line 82, in verify
+    obj = cls[obj.replace(cls.__name__ + ".", "")]
+          ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/enum.py", line 814, in __getitem__
+    return cls._member_map_[name]
+           ~~~~~~~~~~~~~~~~^^^^^^
+KeyError: 'IMAGENET1K_V2'
+Running baseline.py with model: inception_v3
+Files already downloaded and verified
+Files already downloaded and verified
+Traceback (most recent call last):
+  File "/mnt/disk1/hieupcvp/torch_cv/cnn/baseline.py", line 566, in <module>
+    accuracy , train_time = run_inception_v3()
+                            ^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/hieupcvp/torch_cv/cnn/baseline.py", line 307, in run_inception_v3
+    model = models.inception_v3(weights= 'IMAGENET1K_V2')
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torchvision/models/_utils.py", line 142, in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torchvision/models/_utils.py", line 228, in inner_wrapper
+    return builder(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torchvision/models/inception.py", line 460, in inception_v3
+    weights = Inception_V3_Weights.verify(weights)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torchvision/models/_api.py", line 82, in verify
+    obj = cls[obj.replace(cls.__name__ + ".", "")]
+          ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/enum.py", line 814, in __getitem__
+    return cls._member_map_[name]
+           ~~~~~~~~~~~~~~~~^^^^^^
+KeyError: 'IMAGENET1K_V2'
+Running baseline.py with model: mobilenet_v2_from_scratch
+Files already downloaded and verified
+Files already downloaded and verified
+begin training epoch 1/20
+Traceback (most recent call last):
+  File "/mnt/disk1/hieupcvp/torch_cv/cnn/baseline.py", line 568, in <module>
+    accuracy , train_time = run_mobilenet_v2_from_scratch()
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/hieupcvp/torch_cv/cnn/baseline.py", line 450, in run_mobilenet_v2_from_scratch
+    model , train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_mobilenet_v2_from_scratch.pth',data_loader= dataloader, num_epochs= 20)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/hieupcvp/torch_cv/cnn/baseline.py", line 134, in train_model
+    outputs = model(inputs)
+              ^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torchvision/models/mobilenetv2.py", line 174, in forward
+    return self._forward_impl(x)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torchvision/models/mobilenetv2.py", line 166, in _forward_impl
+    x = self.features(x)
+        ^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torchvision/models/mobilenetv2.py", line 64, in forward
+    return self.conv(x)
+           ^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py", line 193, in forward
+    return F.batch_norm(
+           ^^^^^^^^^^^^^
+  File "/mnt/disk1/anaconda3/envs/hieupcvp/lib/python3.12/site-packages/torch/nn/functional.py", line 2812, in batch_norm
+    return torch.batch_norm(
+           ^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 222.00 MiB. GPU 0 has a total capacity of 9.67 GiB of which 32.62 MiB is free. Process 2597391 has 2.06 GiB memory in use. Process 2597770 has 2.06 GiB memory in use. Including non-PyTorch memory, this process has 5.51 GiB memory in use. Of the allocated memory 5.24 GiB is allocated by PyTorch, and 26.11 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable
