@@ -27,14 +27,14 @@ from torch.utils.data import DataLoader
 
 epoch_num = 3
 number_layers = 3
-batch_size_train = 64
-batch_size_test = 500
+batch_size_train = 16
+batch_size_test = 16
 l_r = 0.01
 momentum = 0.9
 log_interval = 100  #how often the training result being printed (1 time for every 100 batches)
 random_seed = 318
 torch.manual_seed(random_seed)
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # I got error on downloading this dataset so I only use it online without downloading
 
@@ -43,7 +43,29 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #     torch.cuda.empty_cache()
 #     gc.collect()
 
+def free_then_unfreeze_layers_efficientnet(model, num_unfreeze_layers):
+    # Freeze all model parameters
+    for param in model.parameters():
+        param.requires_grad = False
 
+    # Unfreeze the last 'num_unfreeze_layers' layers
+    layers = [
+        model._blocks[-1],
+        model._blocks[-2],
+        model._conv_head,
+        model._bn1,
+        model._fc
+    ]
+    unfrozen_layers_count = 0
+
+    for layer in reversed(layers):
+        if unfrozen_layers_count >= num_unfreeze_layers:
+            break
+        for param in layer.parameters():
+            param.requires_grad = True
+        unfrozen_layers_count += 1
+
+    return model
 
 
 def preprocessing_data(transform_train , transform_test):
@@ -69,26 +91,63 @@ def preprocessing_data(transform_train , transform_test):
     return training_data , valid_data , test_data
 
 
-def unfreeze_layers(model, num_unfreeze_layers=1):
+def unfreeze_layers(model, num_unfreeze_layers=number_layers):
 
-    #freeze all model parameters 
-
+    # Freeze all model parameters
     for param in model.parameters():
         param.requires_grad = False
-   
 
     """
     Gradually unfreeze layers starting from the deepest layers.
-    `num_unfreeze_layers` specifies how many blocks to unfreeze.
+    `num_unfreeze_layers` specifies how many layers to unfreeze.
     """
     layers = list(model.children())
-    
-    # Unfreeze the last 'num_unfreeze_layers' blocks
-    for i in range(len(layers)-num_unfreeze_layers, len(layers)):
-        for param in layers[i].parameters():
+
+    # Helper function to recursively unfreeze parameters in a module
+    def unfreeze_module(module):
+        for param in module.parameters():
             param.requires_grad = True
 
+    # Reverse the order to start unfreezing from the last layers
+    layers.reverse()
+    unfrozen_layers_count = 0
+
+    # Unfreeze the last 'num_unfreeze_layers' layers
+    for layer in layers:
+        if unfrozen_layers_count >= num_unfreeze_layers:
+            break
+        unfreeze_module(layer)
+        unfrozen_layers_count += 1
+
     return model
+
+
+
+def unfreeze_layers_vgg16(model, num_unfreeze_layers=number_layers):
+
+    for param in model.parameters():
+        param.requires_grad = False
+
+    # Unfreeze the last 'num_unfreeze_layers' layers
+    layers = list(model.features.children()) + list(model.classifier.children())
+    layers.reverse()
+    unfrozen_layers_count = 0
+
+    for layer in layers:
+        if unfrozen_layers_count >= num_unfreeze_layers:
+            break
+        for param in layer.parameters():
+            param.requires_grad = True
+        unfrozen_layers_count += 1
+
+    num_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    print(f"Number of trainable parameters: {num_trainable_params}")
+
+    return model
+
+
+
 
 def change_last_layer(model, num_classes = 10):
     if isinstance(model, models.ResNet):
@@ -124,10 +183,10 @@ def change_last_layer(model, num_classes = 10):
 # for shuffling the dataset when we sample a minibatch in the training phase 
 
 def load_data(training_data , valid_data , test_data):
-    train_dataloader = DataLoader(training_data , batch_size = batch_size_train , shuffle= True)
-    valid_dataloader = DataLoader(valid_data , batch_size = batch_size_test, shuffle= False)
+    train_dataloader = DataLoader(training_data , batch_size = batch_size_train , num_workers= 8,  shuffle= True)
+    valid_dataloader = DataLoader(valid_data , batch_size = batch_size_test, num_workers= 8, shuffle= False)
 
-    test_dataloader = DataLoader(test_data , batch_size= batch_size_test, shuffle = False )
+    test_dataloader = DataLoader(test_data , batch_size= batch_size_test, num_workers = 8,  shuffle = False )
     data_loader = {'train' : train_dataloader , 'test':test_dataloader , 'valid':valid_dataloader}
     return data_loader
 
@@ -149,6 +208,9 @@ def train_model(model , criterion , optimizer , scheduler ,best_model_params_pat
     best_acc = 0
     torch.save(model.state_dict(), best_model_params_path)
     best_acc = 0.0
+    num_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(num_trainable_params)
+        
     if torch.cuda.is_available():
         print("cuda is on")
     
@@ -191,7 +253,7 @@ def train_model(model , criterion , optimizer , scheduler ,best_model_params_pat
         # print(f'Epoch [{epoch + 1}/{num_epochs}], training loss: {running_loss / len(train_dataloader)}, t loss: {}')
 
             if phase == 'train':
-                print(f'Epoch [{epoch + 1}/{num_epochs}], training loss: {epoch_loss}')
+                print(f'Epoch [{epoch + 1}/{num_epochs}], training loss: {epoch_loss} , epoch time: {time.time() - since}')
             else:
                 print(f' valid correct percent : {epoch_acc:.2f}')
         
@@ -251,12 +313,12 @@ def run_resnet50():
     model = change_last_layer(model)
 
     #free 3 layers for train and freeze other layers
-    model = unfreeze_layers(model , num_unfreeze_layers= number_layers)
+    model = unfreeze_layers(model , num_unfreeze_layers= 3)
     model = model.to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-    model , train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_resnet50_best.pth',data_loader= data_loader, num_epochs= 15)
+    model , train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_resnet50_best.pth',data_loader= data_loader, num_epochs= 12)
     result = testing(model , dataloader= data_loader)
     return result , train_time
 
@@ -282,12 +344,12 @@ def run_resnet101():
     # model.fc = nn.Linear(num_ftrs, 10)
 
     model = change_last_layer(model)
-    unfreeze_layers(model , num_unfreeze_layers= 2)
+    model = unfreeze_layers(model , num_unfreeze_layers= 3)
     model = model.to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-    model , train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_resnet101_best.pth',data_loader= data_loader, num_epochs= 15)
+    model , train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_resnet101_best.pth',data_loader= data_loader, num_epochs= 12)
     result = testing(model , dataloader= data_loader)
     return result , train_time
 
@@ -318,12 +380,12 @@ def run_vgg16():
     # model.fc = nn.Linear(num_ftrs, 10)
 
     model = change_last_layer(model)
-    model = unfreeze_layers(model , num_unfreeze_layers= 2)
+    model = unfreeze_layers_vgg16(model , num_unfreeze_layers= 3)
     model = model.to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-    model, train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_vgg16_best.pth',data_loader= dataloader, num_epochs= 15)
+    model, train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_vgg16_best.pth',data_loader= dataloader, num_epochs= 12)
     result = testing(model , dataloader= dataloader)
     return result , train_time
 
@@ -356,12 +418,12 @@ def run_inception_v3():
 
     model = change_last_layer(model)
 
-    model = unfreeze_layers(model , num_unfreeze_layers= 2)
+    model = unfreeze_layers(model , num_unfreeze_layers= number_layers)
     model = model.to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-    model, train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_inception_v3_best.pth',data_loader= dataloader, num_epochs= 15)
+    model, train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_inception_v3_best.pth',data_loader= dataloader, num_epochs= 12)
     result = testing(model , dataloader)
     
     return result , train_time
@@ -397,12 +459,12 @@ def run_efficientnet_b0():
     # # Alternatively, it can be generalized to ``nn.Linear(num_ftrs, len(class_names))``.
     # model.fc = nn.Linear(num_ftrs, 10)
     model = change_last_layer(model)
-    model = unfreeze_layers(model , num_unfreeze_layers= 2)
+    model = free_then_unfreeze_layers_efficientnet(model , num_unfreeze_layers= number_layers)
     model = model.to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-    model , train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_efficientnet_b0_best.pth', data_loader= dataloader, num_epochs= 15)
+    model , train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_efficientnet_b0_best.pth', data_loader= dataloader, num_epochs= 12)
     result = testing(model , dataloader)
     
     return result , train_time
@@ -438,12 +500,12 @@ def run_mobilenet_v2():
     # # Alternatively, it can be generalized to ``nn.Linear(num_ftrs, len(class_names))``.
     # model.fc = nn.Linear(num_ftrs, 10)
     model = change_last_layer(model)
-    model = unfreeze_layers(model , num_unfreeze_layers= 2)
+    model = unfreeze_layers(model , num_unfreeze_layers= number_layers)
     model = model.to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-    model , train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_mobilenet_v2_best.pth',data_loader= dataloader, num_epochs= 15)
+    model , train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_mobilenet_v2_best.pth',data_loader= dataloader, num_epochs= 20)
     result = testing(model , dataloader)
     
     return result ,  train_time
@@ -496,7 +558,7 @@ def run_mobilenet_v2_from_scratch():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-    model , train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_mobilenet_v2_from_scratch.pth',data_loader= dataloader, num_epochs= 20)
+    model , train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_mobilenet_v2_from_scratch.pth',data_loader= dataloader, num_epochs= 12)
     result = testing(model , dataloader)
     
     return result , train_time
@@ -511,7 +573,7 @@ def run_mobilenet_v2_from_scratch():
 #     criterion = nn.CrossEntropyLoss()
 #     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 #     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-#     model = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_densenet121_best.pth', num_epochs= 15)
+#     model = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_densenet121_best.pth', num_epochs= 20)
 #     result = testing(model)
 #     return result
 
@@ -581,12 +643,12 @@ def run_densenet121():
     # model.fc = nn.Linear(num_ftrs, 10)
 
     model = change_last_layer(model)
-    model = unfreeze_layers(model , num_unfreeze_layers=2)
+    model = unfreeze_layers(model , num_unfreeze_layers=number_layers)
     model = model.to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-    model , train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_densenet121_best.pth',data_loader= dataloader, num_epochs= 15)
+    model , train_time = train_model(model = model, criterion = criterion  , optimizer = optimizer,scheduler= exp_lr_scheduler ,best_model_params_path='./modelweight/cifar_densenet121_best.pth',data_loader= dataloader, num_epochs= 12)
     result = testing(model , dataloader= dataloader)
     
     return result , train_time
@@ -628,3 +690,34 @@ if __name__ == "__main__":
     print("Done!")
 
 
+
+
+# if __name__ == "__main__":
+
+#     # Load the pre-trained VGG16 model
+#     vgg16 = models.vgg16(pretrained=True)
+
+#     # Modify the last layer to output 10 classes
+#     vgg16.classifier[6] = nn.Linear(in_features=4096, out_features=10)
+
+#     # Freeze all parameters
+#     # for param in vgg16.parameters():
+#     #     param.requires_grad = False
+
+#     # # Unfreeze the parameters of the last layer and one other layer (for example, classifier[5])
+#     # for param in vgg16.classifier[5].parameters():
+#     #     param.requires_grad = True
+#     # for param in vgg16.classifier[6].parameters():
+#     #     param.requires_grad = True
+
+#     vgg16 = unfreeze_layers(vgg16 , 2)
+
+#     # Alternatively, if you want to train the last convolutional layer (for example, features[28])
+#     # Uncomment the following lines to unfreeze it
+#     # for param in vgg16.features[28].parameters():
+#     #     param.requires_grad = True
+
+#     # Calculate the number of trainable parameters
+#     num_trainable_params = sum(p.numel() for p in vgg16.parameters() if p.requires_grad)
+
+#     print(f"Number of trainable parameters: {num_trainable_params}")
